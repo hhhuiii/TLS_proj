@@ -3,7 +3,7 @@
 """
 批量拆分pcap文件的脚本使用示例，在split_cap.py所在目录下运行
 python split_pcap.py
-      D:\\ETC_proj\\TLS_ETC\\ISCX_dataset\\VPN-PCAPS
+      D:\\ETC_proj\\ISCX_dataset\\VPN-PCAPS
        --level flow
 """
 
@@ -25,22 +25,22 @@ def extract_label_from_filename(filename):
     # label_type = base_name.split("_")[1] # 提取标签部分（流量类型）
     return label_app
 
-def is_udp_flow(file_path):
-    # 判断一个PCAP文件是否属于UDP流量
-    try:
-        packets = rdpcap(file_path)
-        for packet in packets:
-            if UDP in packet:
-                return True
-        return False
+# def is_udp_flow(file_path):
+#     # 判断一个PCAP文件是否属于UDP流量
+#     try:
+#         packets = rdpcap(file_path)
+#         for packet in packets:
+#             if UDP in packet:
+#                 return True
+#         return False
 
-    except Exception as e:
-        print(f"无法读取文件 {file_path}:{e}")
-        return False
+#     except Exception as e:
+#         print(f"无法读取文件 {file_path}:{e}")
+#         return False
 
 def split_cap(pcap_path, pcap_file, pcap_name, pcap_label='', dataset_level='flow'):
     # 创建拆分路径
-    splitcap_dir = "D:\\ETC_proj\\TLS_ETC\\ISCX_dataset\\SplitByFlow"
+    splitcap_dir = "D:\\ETC_proj\\ISCX_dataset\\SplitByFlow"
     if not os.path.exists(splitcap_dir):
         os.mkdir(splitcap_dir)
 
@@ -69,18 +69,18 @@ def split_cap(pcap_path, pcap_file, pcap_name, pcap_label='', dataset_level='flo
         return None
 
     # 筛选UDP流
-    udp_files = 0
-    for root, dirs, files in os.walk(output_path):
-        for file in files:
-            if file.endswith(".pcap"):
-                file_path = os.path.join(root, file)
-                if is_udp_flow(file_path):
-                    # 判断为UDP流量
-                    udp_files += 1
-                else:
-                    os.remove(file_path)
-                    print(f"删除非UDP流量文件：{file_path}")
-    print(f"保留{udp_files}个UDP文件")
+    # udp_files = 0
+    # for root, dirs, files in os.walk(output_path):
+    #     for file in files:
+    #         if file.endswith(".pcap"):
+    #             file_path = os.path.join(root, file)
+    #             if is_udp_flow(file_path):
+    #                 # 判断为UDP流量
+    #                 udp_files += 1
+    #             else:
+    #                 os.remove(file_path)
+    #                 print(f"删除非UDP流量文件：{file_path}")
+    # print(f"保留{udp_files}个UDP文件")
 
     return output_path
 
