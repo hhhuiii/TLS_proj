@@ -1,5 +1,7 @@
 import csv
 import ast
+import random
+from collections import defaultdict
 
 
 def extract_valid_ppi_last_row(ppi_str):
@@ -21,53 +23,101 @@ def extract_valid_ppi_last_row(ppi_str):
         return None
 
 
-def filter_csv_columns(input_file, output_file, columns_to_keep):
+def filter_csv_columns_with_sampling(input_file, output_file, columns_to_keep, category_column='CATEGORY', sampling_ratios=None, random_seed=42):
     """
-    从CSV文件中提取指定列并保存为新文件
+    从CSV文件中提取指定列并保存为新文件，支持按指定类别自定义采样比例设置保留的样本数量
     
     参数:
         input_file: 输入CSV文件路径
         output_file: 输出CSV文件路径
         columns_to_keep: 需要保留的列名列表
+        catagory_column: 类别字段名
+        sampling_ratios: 字典，指定每个类别的采样比例,eg:{'Video': 0.2, 'Social': 0.5, 'Chat': 1.0}
+            没有指定类别采样比例时自动生成采样比例
+        random_seed: 随机种子，用于可重复的采样结果
     """
     try:
-        with open(input_file, 'r', newline='', encoding='utf-8') as infile, \
-             open(output_file, 'w', newline='', encoding='utf-8') as outfile:
-            
+        random.seed(random_seed)
+        
+        # 第一阶段：先读取所有数据并统计类别分布
+        category_counts = defaultdict(int)
+        all_rows = []
+        
+        with open(input_file, 'r', newline='', encoding='utf-8') as infile:
             reader = csv.DictReader(infile)
             
-            # 检查请求的列是否存在于原始文件中
+            # 检查列是否存在
             available_columns = reader.fieldnames
             missing_columns = [col for col in columns_to_keep if col not in available_columns]
             
             if missing_columns:
                 print(f"警告: 以下列不存在于原始文件中: {missing_columns}")
-                # 只保留存在的列
                 columns_to_keep = [col for col in columns_to_keep if col in available_columns]
             
             if not columns_to_keep:
                 print("错误: 没有有效的列可保留")
                 return
+                
+            if category_column not in available_columns:
+                print(f"错误: 类别字段 '{category_column}' 不存在")
+                return
             
+            # 读取所有行并统计类别
+            for row in reader:
+                all_rows.append(row)
+                category_counts[row[category_column]] += 1
+        
+        # 如果没有提供采样比例，自动生成动态比例
+        if sampling_ratios is None:
+            sampling_ratios = {}
+            total_samples = sum(category_counts.values())
+            for category, count in category_counts.items():
+                if count > total_samples * 0.1:  # 高频类别（>10%）
+                    sampling_ratios[category] = 0.2  # 保留20%
+                elif count > total_samples * 0.01:  # 中频类别（1%-10%）
+                    sampling_ratios[category] = 0.5  # 保留50%
+                else:  # 低频类别
+                    sampling_ratios[category] = 1.0  # 保留100%   
+        
+        # 第二阶段：按类别采样并写入
+        filtered_count = 0
+        written_count = 0
+        category_written = defaultdict(int)
+        
+        with open(output_file, 'w', newline='', encoding='utf-8') as outfile:
             writer = csv.DictWriter(outfile, fieldnames=columns_to_keep)
             writer.writeheader()
             
-            filtered_count = 0
-            written_count = 0
-
-            for row in reader:
-                # 只写入指定的列
-                if 'PPI' in columns_to_keep:
-                    ppi_last_row = extract_valid_ppi_last_row(row.get('PPI', ''))
-                    if ppi_last_row is None:
-                        filtered_count += 1
-                        continue
-                    row['PPI'] = ppi_last_row
-                filtered_row = {col: row[col] for col in columns_to_keep}
-                writer.writerow(filtered_row)
-                written_count += 1
+            for row in all_rows:
+                category = row[category_column]
+                ratio = sampling_ratios.get(category, 1.0)  # 默认保留
                 
-        print(f"成功处理文件，保留 {written_count} 条，过滤掉 {filtered_count} 条无效 PPI 数据。结果已保存到 {output_file}")
+                # 决定是否保留该行
+                if random.random() <= ratio:
+                    # 处理PPI字段
+                    if 'PPI' in columns_to_keep:
+                        ppi_last_row = extract_valid_ppi_last_row(row.get('PPI', ''))
+                        if ppi_last_row is None:
+                            filtered_count += 1
+                            continue
+                        row['PPI'] = ppi_last_row
+                    
+                    # 写入过滤后的行
+                    filtered_row = {col: row[col] for col in columns_to_keep}
+                    writer.writerow(filtered_row)
+                    written_count += 1
+                    category_written[category] += 1
+                else:
+                    filtered_count += 1
+        
+        # 打印统计信息
+        print(f"成功处理文件，保留 {written_count} 条，过滤掉 {filtered_count} 条")
+        print("\n类别分布统计:")
+        print(f"{'类别':<20} {'原始数量':>10} {'保留数量':>10} {'保留比例':>10}")
+        for category, count in category_counts.items():
+            kept = category_written.get(category, 0)
+            ratio = kept / count if count > 0 else 0
+            print(f"{category:<20} {count:>10} {kept:>10} {ratio:>10.1%}")
         
     except FileNotFoundError:
         print(f"错误: 文件 '{input_file}' 未找到")
@@ -79,4 +129,29 @@ input_csv = "D:\\ETC_proj\\dataset\\flows.csv"          # 原始CSV文件路径
 output_csv = "D:\\ETC_proj\\dataset\\filtered.csv"  # 输出文件路径
 columns_to_keep = ['ID', 'PPI', 'PPI_LEN', 'APP', 'CATEGORY']  # 需要保留的列名
 
-filter_csv_columns(input_csv, output_csv, columns_to_keep)
+
+custom_ratios = {  # 下采样比例
+    'Videoconferencing' : 0.1,
+    'Streaming media' : 0.05,
+    'Software updates' : 0.1,
+    'Social' : 0.06,
+    'Analytics & Telemetry' : 0.06,
+    'Other services and APIs' : 0, # 去掉此类
+    'Instant messaging' : 0.3,
+    'Search' : 0.2,
+    'Music' : 0.12,
+    'Weather services' : 0.2,
+    'Advertising' : 0.04,
+    'Information Systems' : 1,
+    'Authentication services' : 0.1,
+    'File sharing' : 0.1,
+    'Antivirus' : 0.1,
+    'Mail' : 0.1,
+    'Games' : 0.2,
+    'Notification services' : 0.2,
+    'Remote Desktop' : 1.0,
+    'Internet Banking' : 1.0,
+    'Virtual assistant' : 1.0,
+}  # 自定义采样比例
+
+filter_csv_columns_with_sampling(input_csv, output_csv, columns_to_keep, sampling_ratios=custom_ratios, random_seed=42)

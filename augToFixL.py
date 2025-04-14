@@ -3,11 +3,14 @@ import csv
 import random
 import ast
 
+LOSS_RATE = 0.2  # 丢包概率
+FIX_LEN = 30  # 固定长度
+
 # ------------------ 增强算法 1：基于 RTO 的子序列复制 ------------------
 def rto_augmentation(packet_sequence, p, L_min, L_max):
     """
     RTO-based packet subsequence duplication augmentation
-    模拟超时重传导致的分组重复
+    模拟超时重传使得序列长度增加到固定长度
     """
     M = []  # 最终增强后的序列
     T = []  # 暂存连续丢包的子序列
@@ -36,7 +39,7 @@ def rto_augmentation(packet_sequence, p, L_min, L_max):
 def fast_retransmit_augmentation(packet_sequence, p):
     """
     Fast Retransmit-based augmentation
-    模拟快速重传导致的重复数据包
+    模拟快速重传使得序列长度增加到固定长度
     """
     class Packet:
         def __init__(self, value):
@@ -61,9 +64,9 @@ def fast_retransmit_augmentation(packet_sequence, p):
 
 
 # ------------------ 主逻辑：对CSV文件批量增强 PPI 字段 ------------------
-def augment_ppi_from_csv(input_file, output_file, mode='rto', p=0.2, L_min=2, L_max=5):
+def augment_ppi_from_csv(input_file, output_file, mode='rto', p=LOSS_RATE, L_min=2, L_max=5):
     """
-    对CSV中所有PPI字段进行数据增强并截断或填充为长度30
+    对CSV中所有PPI字段进行数据增强并截断或填充为长度FIX_LEN
     
     :param input_file: str, 输入CSV路径，需包含PPI字段（为字符串形式的三行数组）
     :param output_file: str, 输出CSV路径
@@ -97,10 +100,10 @@ def augment_ppi_from_csv(input_file, output_file, mode='rto', p=0.2, L_min=2, L_
                     raise ValueError("Unknown mode: choose 'rto' or 'fast'")
 
                 # 截断或填充为固定长度30
-                if len(augmented) > 30:
-                    augmented = augmented[:30]
+                if len(augmented) > FIX_LEN:
+                    augmented = augmented[:FIX_LEN]
                 else:
-                    augmented += [0] * (30 - len(augmented))
+                    augmented += [0] * (FIX_LEN - len(augmented))
 
                 # 更新PPI字段
                 row['PPI'] = str(augmented)
@@ -112,11 +115,11 @@ def augment_ppi_from_csv(input_file, output_file, mode='rto', p=0.2, L_min=2, L_
 
 
 if __name__ == "__main__":
-    # 修改为你的实际文件路径
+    # 文件路径
     input_csv = "D:/ETC_proj/dataset/filtered.csv"
-    output_csv = "D:/ETC_proj/dataset/augmented_ppi.csv"
+    output_csv = "D:/ETC_proj/dataset/augmentedFixL.csv"
 
     # 使用 RTO 方式增强所有流的 PPI 字段
-    augment_ppi_from_csv(input_csv, output_csv, mode='rto', p=0.3, L_min=2, L_max=4)
+    augment_ppi_from_csv(input_csv, output_csv, mode='rto', p=LOSS_RATE, L_min=2, L_max=4)
 
-    print("增强处理完成，结果保存在:", output_csv)
+    print("固定长度增强处理完成，结果保存在:", output_csv)

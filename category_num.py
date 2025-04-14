@@ -22,8 +22,8 @@ def count_field_values(input_csv, field_name, output_txt):
     print(f"结果已保存到 {output_txt}")
 
 # 示例：统计 CSV 文件中 'Category' 字段的不同值出现次数
-input_csv = 'data.csv'  # 你的 CSV 文件路径
-field_name = 'Category'  # 要统计的字段名称
-output_txt = 'output.txt'  # 输出的文本文件路径
+input_csv = "D:\\ETC_proj\\dataset\\augmentedMoreS.csv"  # 你的 CSV 文件路径
+field_name = 'CATEGORY'  # 要统计的字段名称['ID', 'PPI', 'PPI_LEN', 'APP', 'CATEGORY']
+output_txt = 'MoreScategorys.txt'  # 输出的文本文件路径
 
 count_field_values(input_csv, field_name, output_txt)
