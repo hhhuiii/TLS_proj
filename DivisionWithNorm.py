@@ -60,13 +60,18 @@ def split_and_save(input_csv, output_prefix, test_size=0.1, val_size=0.1, random
     save_split_to_csv(test, f'{output_prefix}\\_test.csv', fieldnames)
 
     print("数据划分和标准化完成。输出文件：")
-    print(f"- 训练集: {output_prefix}\_train.csv")
-    print(f"- 验证集: {output_prefix}\_val.csv")
-    print(f"- 测试集: {output_prefix}\_test.csv")
+    print(f"- 训练集: {output_prefix}/_train.csv")
+    print(f"- 验证集: {output_prefix}/_val.csv")
+    print(f"- 测试集: {output_prefix}/_test.csv")
 
 
 if __name__ == "__main__":
-    input_csv_path = "D:/ETC_proj/dataset/augmentedFixL.csv"  # 输入路径
-    output_prefix = "D:/ETC_proj/dataset_afterProcess"  # 输出文件名前缀
+    # 对照组处理
+    input_csv_path = "D:/ETC_proj/dataset/augmentedFixLBase.csv"
+    output_prefix = "D:/ETC_proj/dataset_afterProcess/base"  # 输出文件名前缀
+
+    # 增强组处理
+    # input_csv_path = "D:/ETC_proj/dataset/augmentedFixL.csv"  # 输入路径
+    # output_prefix = "D:/ETC_proj/dataset_afterProcess/aug"
 
     split_and_save(input_csv_path, output_prefix)
