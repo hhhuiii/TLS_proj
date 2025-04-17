@@ -10,11 +10,11 @@ Music: 52765
 Notification services: 29947
 Games: 29962
 Weather services: 38013
-Remote Desktop: 32416
+Remote Desktop: 40520
 Mail: 44179
 Analytics & Telemetry: 42793
 Social: 42491
 Advertising: 41659
 Internet Banking: 37874
 Authentication services: 53236
-Virtual assistant: 33630
+Virtual assistant: 35872

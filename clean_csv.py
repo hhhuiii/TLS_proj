@@ -27,7 +27,7 @@ def filter_csv_columns_with_sampling(input_file, output_file, columns_to_keep, c
     """
     从CSV文件中提取指定列并保存为新文件，支持按指定类别自定义采样比例设置保留的样本数量
     
-    参数:
+    options:
         input_file: 输入CSV文件路径
         output_file: 输出CSV文件路径
         columns_to_keep: 需要保留的列名列表

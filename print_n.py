@@ -1,5 +1,7 @@
 import csv
 
+# 输出csv文件的前n行
+
 ROWS = 10  # 设置要打印的行数
 
 def print_first_n_rows(csv_file_path):
@@ -19,5 +21,5 @@ def print_first_n_rows(csv_file_path):
         print(f"发生错误: {e}")
 
 # 使用示例 - 替换为你的CSV文件路径
-csv_file_path = "D:\\ETC_proj\\dataset\\filtered.csv"  # 修改为你的CSV文件路径
+csv_file_path = "D:\\ETC_proj\\dataset\\augmentedFixL.csv"  # 修改为你的CSV文件路径
 print_first_n_rows(csv_file_path)

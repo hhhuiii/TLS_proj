@@ -19,7 +19,7 @@ TARGET_LEN = None   # 可设为 30 或 None（None 表示不限制长度）# 在
 P = 0.2            # 丢包率
 
 # RTO 算法参数
-LMIN = 1           # 最小丢包长度
+LMIN = 2           # 最小丢包长度
 LMAX = 5           # 最大丢包长度
 
 # ------------ 两种增强算法 ------------ #
@@ -78,7 +78,7 @@ def shift_fast_retransmit_augmentation(packet_seq: List[int], p: float, target_l
                 O.pop(i)  # 从原始序列中移除
                 break  # 模拟每一轮收发过程中只处理一个数据包的交互节奏
                         # 成功发送一个数据包后立即break进入while循环考虑列表O中lost状态数据包的重传操作
-                        # 若想模拟多个数据包的交互，引入计数，计数满足n个ACK后 再break
+                        # 若想模拟多个数据包的交互，引入计数，计数满足n个ACK后 再break模拟收到多个ACK后重传的行为   
             else:
                 O[i]['flag'] = 'lost'  # 标记数据包为丢失，等待下一次while循环重传
 
@@ -147,7 +147,7 @@ def augment_csv(input_csv: str, output_csv: str):
             row[PPI_FIELD] = str(row[PPI_FIELD])
             writer.writerow(row)
 
-    print(f"增强完成，已保存至 {output_csv}，使用的增强方法: {AUG_METHOD}")
+    print(f"RTO/FAST增强完成，已保存至 {output_csv}，使用的增强方法: {AUG_METHOD}")
 
 
 # ------------ 路径配置并运行 ------------ #
