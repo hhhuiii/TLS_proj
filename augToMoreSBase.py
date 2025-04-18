@@ -4,7 +4,7 @@ from typing import Dict
 
 # 重采样增加少数类样本数量
 
-# ------------ 配置 ------------ #
+# 增强配置
 TARGET_FIELD = 'CATEGORY'                               # 筛选字段名
 TARGET_VALUES = {'Remote Desktop', 'Virtual assistant'} # 需要增强的类别
 AUG_PER_SAMPLE = {
@@ -14,7 +14,7 @@ AUG_PER_SAMPLE = {
 DEFAULT_AUG_SAMPLE = 1
 PPI_FIELD = 'PPI'
 
-# ------------ 重采样增强函数 ------------ #
+# 重采样增强
 def copy_based_augmentation(input_csv: str, output_csv: str):
     """
     根据设定比例复制目标类别样本，作为采用重采样方法增强样本数量的对照增强集
@@ -49,8 +49,8 @@ def copy_based_augmentation(input_csv: str, output_csv: str):
 
     print(f"重采样增强完成，已保存至 {output_csv}，按设定比例复制样本")
 
-# ------------ 路径配置并运行 ------------ #
+# 配置路径
 if __name__ == "__main__":
     input_csv_path = "D:\\ETC_proj\\dataset\\filtered.csv"
-    output_csv_path = "D:\\ETC_proj\\dataset\\augmentedMoreSBase.csv"
+    output_csv_path = "D:\\ETC_proj\\dataset\\MoreSBase.csv"
     copy_based_augmentation(input_csv_path, output_csv_path)

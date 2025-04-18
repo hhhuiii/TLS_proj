@@ -23,8 +23,8 @@ def count_field_values(input_csv, field_name, output_txt):
 
 # 示例：统计 CSV 文件中 'Category' 字段的不同值出现次数
 # input_csv = "D:\\ETC_proj\\dataset_afterProcess\\base\\_test.csv"
-input_csv = "D:\\ETC_proj\\dataset_afterProcess\\aug\\_test.csv"  # CSV 文件路径
+input_csv = "D:\\ETC_proj\\dataset_afterProcess\\aug\\_train.csv"  # CSV 文件路径
 field_name = 'CATEGORY'  # 要统计的字段名称['ID', 'PPI', 'PPI_LEN', 'APP', 'CATEGORY']
-output_txt = 'test.txt'  # 输出的文本文件路径
+output_txt = 'train.txt'  # 输出的文本文件路径
 
 count_field_values(input_csv, field_name, output_txt)

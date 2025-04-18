@@ -120,9 +120,12 @@ def augment_ppi_from_csv(input_file, output_file, mode=MODE, p=LOSS_RATE, L_min=
 if __name__ == "__main__":
     # 文件路径
     # 输入文件是经过样本数量增强后的文件
-    # input_csv = "D:/ETC_proj/dataset/augmentedMoreSBase.csv"
-    input_csv = "D:/ETC_proj/dataset/augmentedMoreS.csv"
-    output_csv = "D:/ETC_proj/dataset/augmentedFixL.csv"
+    # 此长度标准化文件针对两种样本数量增强方法得到的csv文件分别进行处理得到两个csv文件
+    input_csv = "D:/ETC_proj/dataset/MoreSBase.csv"
+    output_csv = "D:/ETC_proj/dataset/FixLwithMoreSBase.csv"
+
+    # input_csv = "D:/ETC_proj/dataset/MoreS.csv"
+    # output_csv = "D:/ETC_proj/dataset/FixLwithMoreS.csv"
 
     # 使用 RTO 方式增强所有流的 PPI 字段
     augment_ppi_from_csv(input_csv, output_csv, mode=MODE, p=LOSS_RATE, L_min=2, L_max=4)

@@ -27,10 +27,14 @@ def pad_ppi_from_csv(input_file, output_file):
         writer = csv.DictWriter(outfile, fieldnames=fieldnames)
         writer.writeheader()
 
+        index = 0  # 行索引
         for row in reader:
             try:
+                index += 1  # 增加行索引
                 ppi = ast.literal_eval(row['PPI'])
+                print(f"processing:{index}, PPI:{ppi}")  # 打印当前行索引和PPI字段
                 padded_ppi = pad_ppi_sequence(ppi)  # 填充0表示流的结束
+
                 row['PPI'] = str(padded_ppi)
                 writer.writerow(row)
             except Exception as e:
@@ -40,9 +44,13 @@ def pad_ppi_from_csv(input_file, output_file):
 
 if __name__ == "__main__":
     # 输入为进行数量增强后的样本，但未进行序列长度标准化
-    # input_csv = "D:/ETC_proj/dataset/augmentedMoreSBase.csv"
-    input_csv = "D:/ETC_proj/dataset/augmentedMoreS.csv"
-    output_csv = "D:/ETC_proj/dataset/augmentedFixLBase.csv"
+    # 此长度标准化针对两种样本数量增强方法分别处理得到两个csv文件
+
+    input_csv = "D:/ETC_proj/dataset/MoreSBase.csv"
+    output_csv = "D:/ETC_proj/dataset/FixLBasewithMoreSBase.csv"
+
+    # input_csv = "D:/ETC_proj/dataset/MoreS.csv"
+    # output_csv = "D:/ETC_proj/dataset/FixLBasewithMoreS.csv"
 
     pad_ppi_from_csv(input_csv, output_csv)
 

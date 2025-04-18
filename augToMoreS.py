@@ -3,10 +3,9 @@ import random
 import ast
 from typing import List
 
-# ------------ 配置 ------------ #
 # 配置增强逻辑的参数
 TARGET_FIELD = 'CATEGORY'                               # 筛选字段名，用于选择需要增强的行
-TARGET_VALUES = {'Remote Desktop', 'Virtual assistant'} # 筛选字段值集合，只有这些值的行会被增强
+TARGET_VALUES = {'Remote Desktop', 'Virtual assistant'} # CATEGORY字段的值集合，只有这些值的行会被增强
 AUG_PER_SAMPLE = {
     'Remote Desktop': 4,  # 对于 'Remote Desktop' 增强 4 次
     'Virtual assistant': 15  # 对于 'Virtual assistant' 增强 15 次
@@ -22,17 +21,16 @@ P = 0.2            # 丢包率
 LMIN = 2           # 最小丢包长度
 LMAX = 5           # 最大丢包长度
 
-# ------------ 两种增强算法 ------------ #
 # RTO（超时重传）增强算法（通常在网络较为拥塞时起作用，因此丢包时大概率会连续丢若干个包）
 def shift_rto_augmentation(packet_seq: List[int], p: float, lmin: int, lmax: int, target_len: int = None) -> List[int]:
     """
     使用 RTO 算法对数据包序列进行增强
     options:
-        @ packet_seq: 原始数据包序列
-        @ p: 丢包概率
-        @ lmin: 最小丢包长度
-        @ lmax: 最大丢包长度
-        @ target_len: 目标序列长度（optional）
+        packet_seq: 原始数据包序列
+        p: 丢包概率
+        lmin: 最小丢包长度
+        lmax: 最大丢包长度
+        target_len: 目标序列长度（optional）
     return value:
         增强后的数据包序列
     """
@@ -62,9 +60,9 @@ def shift_fast_retransmit_augmentation(packet_seq: List[int], p: float, target_l
     """
     使用快速重传算法对数据包序列进行增强
     options:
-        @ packet_seq: 原始数据包序列
-        @ p: 丢包概率
-        @ target_len: 目标序列长度（optional）
+        packet_seq: 原始数据包序列
+        p: 丢包概率
+        target_len: 目标序列长度（optional）
     return value:
         增强后的数据包序列
     """
@@ -88,7 +86,7 @@ def shift_fast_retransmit_augmentation(packet_seq: List[int], p: float, target_l
     return M[:target_len] if len(M) > target_len else M + [0] * (target_len - len(M))
 
 
-# ------------ 增强函数 ------------ #
+# 增强函数
 def augment_ppi_sequence(ppi_seq: List[int]) -> List[int]:
     """
     根据配置的增强方法对 PPI 序列进行增强
@@ -109,7 +107,7 @@ def augment_ppi_sequence(ppi_seq: List[int]) -> List[int]:
 def augment_csv(input_csv: str, output_csv: str):
     """
     对 CSV 文件中的数据进行增强，并将结果保存到新的 CSV 文件
-    参数:
+    options:
         input_csv: 输入 CSV 文件路径
         output_csv: 输出 CSV 文件路径
     """
@@ -154,5 +152,5 @@ def augment_csv(input_csv: str, output_csv: str):
 if __name__ == "__main__":
     # 输入和输出 CSV 文件路径
     input_csv_path = "D:\\ETC_proj\\dataset\\filtered.csv"
-    output_csv_path = "D:\\ETC_proj\\dataset\\augmentedMoreS.csv"
+    output_csv_path = "D:\\ETC_proj\\dataset\\MoreS.csv"
     augment_csv(input_csv_path, output_csv_path)  # 调用增强函数

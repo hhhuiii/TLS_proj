@@ -9,8 +9,9 @@ FIX_LEN = 30  # 序列固定长度
 STANDARDIZE_DIVISOR = 1460  # 标准化除数
 LABEL_FIELD = 'CATEGORY'  # 按照标签字段划分三种数据集
 
+
 def normalize_sequence(seq, fix_len=FIX_LEN, divisor=STANDARDIZE_DIVISOR):
-    """标准化并调整序列长度"""
+    """标准化并检查序列长度"""
     # 标准化
     seq = [x / divisor for x in seq]
     # 调整长度
@@ -18,6 +19,7 @@ def normalize_sequence(seq, fix_len=FIX_LEN, divisor=STANDARDIZE_DIVISOR):
         return seq[:fix_len]
     else:
         return seq + [0.0] * (fix_len - len(seq))
+
 
 def load_and_preprocess(csv_path):
     """加载CSV，返回样本列表和标签列表"""
@@ -35,6 +37,7 @@ def load_and_preprocess(csv_path):
                 print(f"跳过错误样本: {e}")
     return samples, labels
 
+
 def save_split_to_csv(split_data, output_file, fieldnames):
     with open(output_file, 'w', newline='', encoding='utf-8') as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -42,6 +45,7 @@ def save_split_to_csv(split_data, output_file, fieldnames):
         for norm_ppi, row in split_data:
             row['PPI'] = str(norm_ppi)
             writer.writerow(row)
+
 
 def split_and_save(input_csv, output_prefix, test_size=0.1, val_size=0.1, random_seed=42):
     samples, labels = load_and_preprocess(input_csv)
@@ -66,12 +70,17 @@ def split_and_save(input_csv, output_prefix, test_size=0.1, val_size=0.1, random
 
 
 if __name__ == "__main__":
-    # 对照组处理
-    input_csv_path = "D:/ETC_proj/dataset/augmentedFixLBase.csv"
-    output_prefix = "D:/ETC_proj/dataset_afterProcess/base"  # 输出文件名前缀
 
-    # 增强组处理
-    # input_csv_path = "D:/ETC_proj/dataset/augmentedFixL.csv"  # 输入路径
-    # output_prefix = "D:/ETC_proj/dataset_afterProcess/aug"
+    # input_csv_path = "D:/ETC_proj/dataset/FixLBasewithMoreS.csv"  # TCP-aware增强少数类样本数量with直接以0填充PPI至固定长度
+    # output_prefix = "D:/ETC_proj/dataset_afterProcess/FixLBasewithMoreS"  # 拆分csv文件输出路径
+
+    # input_csv_path = "D:/ETC_proj/dataset/FixLBasewithMoreSBase.csv"  # 重采样增强少数类样本数量with直接以0填充PPI至固定长度
+    # output_prefix = "D:/ETC_proj/dataset_afterProcess/FixLBasewithMoreSBase"
+
+    # input_csv_path = "D:/ETC_proj/dataset/FixLwithMoreSBase.csv"  # 重采样增强少数类样本数量with单次TCP-aware增强长度后以0填充至固定长度
+    # output_prefix = "D:/ETC_proj/dataset_afterProcess/FixLwithMoreSBase"
+
+    input_csv_path = "D:/ETC_proj/dataset/FixLwithMoreS.csv"  # TCP-aware增强少数类样本数量with单次TCP-aware增强长度后以0填充至固定长度
+    output_prefix = "D:/ETC_proj/dataset_afterProcess/FixLwithMoreS"
 
     split_and_save(input_csv_path, output_prefix)
