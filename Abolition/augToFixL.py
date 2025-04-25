@@ -22,7 +22,7 @@ def rto_augmentation(packet_sequence, p, L_min, L_max):
     while i < n:
         if random.random() < p:  # 发生丢包（网络可能产生拥塞）
             L = random.randint(L_min, L_max)  # 在丢包长度范围内随机取本次丢包长度
-            end = min(i + L, n)  # 丢包序列即为位置
+            end = min(i + L, n)  # 丢包序列结尾位置
             subseq = packet_sequence[i:end]
             T.extend(subseq)      # 加入暂存重传序列
             M.extend(subseq)      # 模拟第一次传输的数据包到达（子序列重复与子序列移位的不同之处）

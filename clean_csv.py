@@ -125,30 +125,30 @@ def filter_csv_columns_with_sampling(input_file, output_file, columns_to_keep, c
         print(f"发生错误: {e}")
 
 # 参数设置
-input_csv = "D:\\ETC_proj\\dataset\\flows.csv"          # 原始CSV文件路径
-output_csv = "D:\\ETC_proj\\dataset\\filtered.csv"  # 输出文件路径
-columns_to_keep = ['ID', 'PPI', 'PPI_LEN', 'APP', 'CATEGORY']  # 需要保留的列名
+input_csv = "C:\\ETC_proj\\dataset\\flows.csv"     # 原始CSV文件路径
+output_csv = "C:\\ETC_proj\\dataset\\filtered.csv" # 输出文件路径
+columns_to_keep = ['PPI', 'PPI_LEN', 'CATEGORY']  # 需要保留的列名：数据包长度序列、序列原始长度、标签
 
 
 custom_ratios = {  # 下采样比例
-    'Videoconferencing' : 0.1,
-    'Streaming media' : 0.05,
-    'Software updates' : 0.1,
-    'Social' : 0.06,
-    'Analytics & Telemetry' : 0.06,
+    'Videoconferencing' : 0.2,
+    'Streaming media' : 0.1,
+    'Software updates' : 0.2,
+    'Social' : 0.12,
+    'Analytics & Telemetry' : 0.12,
     'Other services and APIs' : 0, # 去掉此类
-    'Instant messaging' : 0.3,
-    'Search' : 0.2,
-    'Music' : 0.12,
-    'Weather services' : 0.2,
-    'Advertising' : 0.04,
+    'Instant messaging' : 0.6,
+    'Search' : 0.4,
+    'Music' : 0.24,
+    'Weather services' : 0.4,
+    'Advertising' : 0.08,
     'Information Systems' : 1,
-    'Authentication services' : 0.1,
-    'File sharing' : 0.1,
-    'Antivirus' : 0.1,
-    'Mail' : 0.1,
-    'Games' : 0.2,
-    'Notification services' : 0.2,
+    'Authentication services' : 0.2,
+    'File sharing' : 0.2,
+    'Antivirus' : 0.2,
+    'Mail' : 0.2,
+    'Games' : 0.4,
+    'Notification services' : 0.4,
     'Remote Desktop' : 1.0,
     'Internet Banking' : 1.0,
     'Virtual assistant' : 1.0,

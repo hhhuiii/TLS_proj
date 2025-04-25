@@ -1,28 +1,20 @@
-# 划分训练集、验证集和测试集，同时对长度序列中的长度信息进行标准化
 import csv
 import ast
-import random
+import os
 from sklearn.model_selection import train_test_split
 
 # 配置参数
-FIX_LEN = 30  # 序列固定长度
 STANDARDIZE_DIVISOR = 1460  # 标准化除数
-LABEL_FIELD = 'CATEGORY'  # 按照标签字段划分三种数据集
+LABEL_FIELD = 'CATEGORY'  # 标签字段
 
 
-def normalize_sequence(seq, fix_len=FIX_LEN, divisor=STANDARDIZE_DIVISOR):
-    """标准化并检查序列长度"""
-    # 标准化
-    seq = [x / divisor for x in seq]
-    # 调整长度
-    if len(seq) > fix_len:
-        return seq[:fix_len]
-    else:
-        return seq + [0.0] * (fix_len - len(seq))
+def normalize_sequence(seq, divisor=STANDARDIZE_DIVISOR):
+    """只做标准化，不调整序列长度"""
+    return [x / divisor for x in seq]
 
 
 def load_and_preprocess(csv_path):
-    """加载CSV，返回样本列表和标签列表"""
+    """加载CSV并返回样本和标签"""
     samples, labels = [], []
     with open(csv_path, 'r', encoding='utf-8') as f:
         reader = csv.DictReader(f)
@@ -39,6 +31,7 @@ def load_and_preprocess(csv_path):
 
 
 def save_split_to_csv(split_data, output_file, fieldnames):
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
     with open(output_file, 'w', newline='', encoding='utf-8') as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
@@ -47,40 +40,43 @@ def save_split_to_csv(split_data, output_file, fieldnames):
             writer.writerow(row)
 
 
-def split_and_save(input_csv, output_prefix, test_size=0.1, val_size=0.1, random_seed=42):
+def split_for_pretrain_and_finetune(input_csv, output_prefix, pretrain_ratio=0.8, random_seed=42):
     samples, labels = load_and_preprocess(input_csv)
 
-    # 拆分出测试集 stratify参数保证按照每个标签在整个数据集中的分布比例进行划分
-    train_val, test = train_test_split(samples, test_size=test_size, stratify=labels, random_state=random_seed)
+    # 划分预训练集和微调集
+    pretrain, finetune = train_test_split(
+        samples, test_size=(1 - pretrain_ratio), stratify=labels, random_state=random_seed
+    )
 
-    # 再从 train_val 中拆出验证集
-    train_val_labels = [row[LABEL_FIELD] for _, row in train_val]
-    train, val = train_test_split(train_val, test_size=val_size, stratify=train_val_labels, random_state=random_seed)
+    print(f"预训练集大小: {len(pretrain)}")
+    print(f"微调集大小: {len(finetune)}")
 
-    fieldnames = list(train[0][1].keys())
+    # 微调集再划分为 train/val/test（按照6:2:2的比例）
+    finetune_labels = [row[LABEL_FIELD] for _, row in finetune]
+    ft_train, ft_temp = train_test_split(finetune, test_size=0.4, stratify=finetune_labels, random_state=random_seed)
+    ft_temp_labels = [row[LABEL_FIELD] for _, row in ft_temp]
+    ft_val, ft_test = train_test_split(ft_temp, test_size=0.5, stratify=ft_temp_labels, random_state=random_seed)
 
-    save_split_to_csv(train, f'{output_prefix}\\_train.csv', fieldnames)
-    save_split_to_csv(val, f'{output_prefix}\\_val.csv', fieldnames)
-    save_split_to_csv(test, f'{output_prefix}\\_test.csv', fieldnames)
+    fieldnames = list(pretrain[0][1].keys())
 
-    print("数据划分和标准化完成。输出文件：")
-    print(f"- 训练集: {output_prefix}/_train.csv")
-    print(f"- 验证集: {output_prefix}/_val.csv")
-    print(f"- 测试集: {output_prefix}/_test.csv")
+    # 保存预训练集
+    save_split_to_csv(pretrain, f'{output_prefix}/pretrain.csv', fieldnames)
+
+    # 微调集输出子目录
+    ft_output_dir = os.path.join(output_prefix, '_finetune_split')
+    save_split_to_csv(ft_train, os.path.join(ft_output_dir, 'train.csv'), fieldnames)
+    save_split_to_csv(ft_val, os.path.join(ft_output_dir, 'val.csv'), fieldnames)
+    save_split_to_csv(ft_test, os.path.join(ft_output_dir, 'test.csv'), fieldnames)
+
+    print("数据划分完成：")
+    print(f"- 预训练集: {output_prefix}_pretrain.csv")
+    print(f"- 微调训练集: {ft_output_dir}/train.csv")
+    print(f"- 微调验证集: {ft_output_dir}/val.csv")
+    print(f"- 微调测试集: {ft_output_dir}/test.csv")
 
 
 if __name__ == "__main__":
+    input_csv_path = "C:/ETC_proj/dataset/filtered.csv"
+    output_prefix = "C:/ETC_proj/dataset_afterDivision"
 
-    # input_csv_path = "D:/ETC_proj/dataset/FixLBasewithMoreS.csv"  # TCP-aware增强少数类样本数量with直接以0填充PPI至固定长度
-    # output_prefix = "D:/ETC_proj/dataset_afterProcess/FixLBasewithMoreS"  # 拆分csv文件输出路径
-
-    # input_csv_path = "D:/ETC_proj/dataset/FixLBasewithMoreSBase.csv"  # 重采样增强少数类样本数量with直接以0填充PPI至固定长度
-    # output_prefix = "D:/ETC_proj/dataset_afterProcess/FixLBasewithMoreSBase"
-
-    # input_csv_path = "D:/ETC_proj/dataset/FixLwithMoreSBase.csv"  # 重采样增强少数类样本数量with单次TCP-aware增强长度后以0填充至固定长度
-    # output_prefix = "D:/ETC_proj/dataset_afterProcess/FixLwithMoreSBase"
-
-    input_csv_path = "D:/ETC_proj/dataset/FixLwithMoreS.csv"  # TCP-aware增强少数类样本数量with单次TCP-aware增强长度后以0填充至固定长度
-    output_prefix = "D:/ETC_proj/dataset_afterProcess/FixLwithMoreS"
-
-    split_and_save(input_csv_path, output_prefix)
+    split_for_pretrain_and_finetune(input_csv_path, output_prefix)

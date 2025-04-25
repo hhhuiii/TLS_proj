@@ -9,6 +9,11 @@ import ast
 from sklearn.preprocessing import LabelEncoder
 import torch.nn.functional as F
 from sklearn.metrics import classification_report, confusion_matrix
+import csv
+
+# 选择使用的数据集
+CHOOSE = 2  # 1:FixLBasewithMoreS 2:FixLBasewithMoreSBase 3:FixLwithMoreS 4:FixLwithMoreSBase
+choose = ['FixLBasewithMoreS', 'FixLBasewithMoreSBase', 'FixLwithMoreS', 'FixLwithMoreSBase']
 
 
 # 数据集类
@@ -69,6 +74,19 @@ class LSTMClassifier(nn.Module):
         return self.fc(hn[-1])  # 将最后的隐藏状态作为整条序列的表示（logits）
 
 
+# GRU模型类
+class GRUClassifier(nn.Module):
+    def __init__(self, hidden_size, num_classes):  # 参数：隐藏层的维度、分类的类别数量
+        super(GRUClassifier, self).__init__()
+        self.gru = nn.GRU(input_size=1, hidden_size=hidden_size, batch_first=True)  # 每个时间步输入一个标量、每个时间步输出的维度
+        self.fc = nn.Linear(hidden_size, num_classes)  # 最终输出尺寸为[Batch_size, num_classes]，即每个样本对应的类别概率分布（logits）
+
+    def forward(self, x):
+        x = x.unsqueeze(-1)  # 增加一个维度，每个时间步一个标量，尺寸变为[Batch_size, 30, 1]
+        _, hn = self.gru(x)  # hn：最后一个时间步的隐藏状态，尺寸为[1, Batch_size, hidden_size]
+        return self.fc(hn[-1])  # 将最后的隐藏状态作为整条序列的表示（logits）
+
+
 # 训练函数
 def train_epoch(model, loader, optimizer, criterion, device): 
     model.train()  # 将模型设置为训练模式
@@ -115,26 +133,37 @@ def eval_model(model, loader, criterion, device, show_report=False):
     return avg_loss, acc
 
 
+# 保存训练过程日志到CSV
+def save_log_to_csv(logs, filename='DLtraning_log.csv'):
+    with open(filename, mode='a', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(logs)
+
+
 def main(model_type='CNN'):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-    # 数据加载 ： 四种类型的数据
+    # 数据加载
     # 读取PPI字段的序列，解析为数值列表，提取'CATEGORY'作为标签且对标签进行编码
-    train_set = PPIDataset('D:/ETC_proj/dataset_afterProcess/FixLBasewithMoreS/_train.csv')
-    val_set = PPIDataset('D:/ETC_proj/dataset_afterProcess/FixLBasewithMoreS/_val.csv')
-    test_set = PPIDataset('D:/ETC_proj/dataset_afterProcess/FixLBasewithMoreS/_test.csv')
+    if CHOOSE == 1:
+        train_set = PPIDataset('C:/ETC_proj/dataset_afterProcess/FixLBasewithMoreS/_train.csv')
+        val_set = PPIDataset('C:/ETC_proj/dataset_afterProcess/FixLBasewithMoreS/_val.csv')
+        test_set = PPIDataset('C:/ETC_proj/dataset_afterProcess/FixLBasewithMoreS/_test.csv')
 
-    # train_set = PPIDataset('D:/ETC_proj/dataset_afterProcess/FixLBasewithMoreSBase/_train.csv')
-    # val_set = PPIDataset('D:/ETC_proj/dataset_afterProcess/FixLBasewithMoreSBase/_val.csv')
-    # test_set = PPIDataset('D:/ETC_proj/dataset_afterProcess/FixLBasewithMoreSBase/_test.csv')
+    if CHOOSE == 2:
+        train_set = PPIDataset('C:/ETC_proj/dataset_afterProcess/FixLBasewithMoreSBase/_train.csv')
+        val_set = PPIDataset('C:/ETC_proj/dataset_afterProcess/FixLBasewithMoreSBase/_val.csv')
+        test_set = PPIDataset('C:/ETC_proj/dataset_afterProcess/FixLBasewithMoreSBase/_test.csv')
 
-    # train_set = PPIDataset('D:/ETC_proj/dataset_afterProcess/FixLwithMoreS/_train.csv')
-    # val_set = PPIDataset('D:/ETC_proj/dataset_afterProcess/FixLwithMoreS/_val.csv')
-    # test_set = PPIDataset('D:/ETC_proj/dataset_afterProcess/FixLwithMoreS/_test.csv')
+    if CHOOSE == 3:
+        train_set = PPIDataset('C:/ETC_proj/dataset_afterProcess/FixLwithMoreS/_train.csv')
+        val_set = PPIDataset('C:/ETC_proj/dataset_afterProcess/FixLwithMoreS/_val.csv')
+        test_set = PPIDataset('C:/ETC_proj/dataset_afterProcess/FixLwithMoreS/_test.csv')
 
-    # train_set = PPIDataset('D:/ETC_proj/dataset_afterProcess/FixLwithMoreSBase/_train.csv')
-    # val_set = PPIDataset('D:/ETC_proj/dataset_afterProcess/FixLwithMoreSBase/_val.csv')
-    # test_set = PPIDataset('D:/ETC_proj/dataset_afterProcess/FixLwithMoreSBase/_test.csv')
+    if CHOOSE == 4:
+        train_set = PPIDataset('C:/ETC_proj/dataset_afterProcess/FixLwithMoreSBase/_train.csv')
+        val_set = PPIDataset('C:/ETC_proj/dataset_afterProcess/FixLwithMoreSBase/_val.csv')
+        test_set = PPIDataset('C:/ETC_proj/dataset_afterProcess/FixLwithMoreSBase/_test.csv')
 
     num_classes = len(set(train_set.labels))  # 标签总类数（最后一层的输出维度）
 
@@ -147,8 +176,13 @@ def main(model_type='CNN'):
     if model_type == 'CNN':  # 捕捉局部序列特征
         model = CNNClassifier(num_classes)
     # LSTM
-    else:  # 捕捉时序特征
+    elif model_type == 'LSTM':  # 捕捉时序特征
         model = LSTMClassifier(hidden_size=64, num_classes=num_classes)
+    # GRU
+    elif model_type == 'GRU':  # 捕捉时序特征
+        model = GRUClassifier(hidden_size=64, num_classes=num_classes)
+    else:
+        raise ValueError("Invalid model type. Choose from ['CNN', 'LSTM', 'GRU']")
 
     model.to(device)
     criterion = nn.CrossEntropyLoss()
@@ -156,24 +190,42 @@ def main(model_type='CNN'):
 
     # 早停参数配置
     best_val_acc = 0.0
-    patience = 5  # 最多接受多少次验证集无提升
+    patience = 3  # 最多接受多少次验证集无提升
     trigger_times = 0  # 触发次数
-    best_model_path = 'best_model.pth'  # 最佳模型保存路径
+
+    if CHOOSE == 1:
+        best_model_path = 'FixLBasewithMoreS_model.pth'  # FixLBasewithMoreS模型保存路径
+    
+    if CHOOSE == 2:
+        best_model_path = 'FixLBasewithMoreSBase_model.pth'  # FixLBasewithMoreSBase模型保存路径
+
+    if CHOOSE == 3:
+        best_model_path = 'FixLwithMoreS_model.pth'  # FixLwithMoreS模型保存路径
+
+    if CHOOSE == 4:
+        best_model_path = 'FixLwithMoreSBase_model.pth'  # FixLwithMoreSBase模型保存路径
+
+    # 创建或清除训练日志和结果文件
+    save_log_to_csv(['Epoch', 'Model_Type', 'Dataset', 'Train_Acc', 'Train_Loss', 'Val_Acc', 'Val_Loss'], filename='DLtraining_log.csv')
 
     # 训练过程
     for epoch in range(1, 51):  # 最多训练50个epoch，结合早停策略
         # 每个epoch使用所有的batch进行训练和验证
         train_loss, train_acc = train_epoch(model, train_loader, optimizer, criterion, device)
         val_loss, val_acc = eval_model(model, val_loader, criterion, device)
-        print(f"[Epoch {epoch}] Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}")
+        print(f"[Epoch {epoch}] : dataset->{choose[CHOOSE - 1]} : [训练集] Acc: {train_acc:.4f}, [验证集] Acc: {val_acc:.4f}")
+
+        # 保存日志到CSV和JSON
+        log_entry = [epoch, model_type, choose[CHOOSE - 1], train_acc, train_loss, val_acc, val_loss]
+        save_log_to_csv(log_entry, filename='DLtraining_logs.csv')
 
         # 判断模型在验证集上的准确率是否提升
         # 训练集上的准确率几乎一定是持续上涨的，早停策略应当依赖于验证集表现
         if val_acc > best_val_acc:
             best_val_acc = val_acc
-            trigger_times = 0
+            trigger_times = 0  # 发现有提升重置触发次数
             torch.save(model.state_dict(), best_model_path) # 保存最佳模型
-            print(f"模型保存至 {best_model_path}")
+            # print(f"model保存至 {best_model_path}")
         else:
             trigger_times += 1
             if trigger_times >= patience:
@@ -182,8 +234,8 @@ def main(model_type='CNN'):
 
     # 最终测试评估模型性能
     model.load_state_dict(torch.load(best_model_path))  # 加载最佳模型测试
-    test_loss, test_acc = eval_model(model, test_loader, criterion, device, )
-    print(f"Test Acc: {test_acc:.4f}")
+    test_loss, test_acc = eval_model(model, test_loader, criterion, device, show_report=True)
+    print(f"dataset->{choose[CHOOSE - 1]}:[测试集] Acc: {test_acc:.4f}")
 
 if __name__ == '__main__':
-    main(model_type='CNN')  # 'CNN'或'LSTM'
+    main(model_type='CNN')  # 'CNN'或'LSTM'或'GRU'

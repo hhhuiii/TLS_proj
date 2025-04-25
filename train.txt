@@ -1,0 +1,20 @@
+Social: 34418
+Advertising: 33744
+Games: 24269
+Mail: 35785
+Weather services: 30791
+Information Systems: 68971
+Authentication services: 43121
+File sharing: 50113
+Music: 42739
+Remote Desktop: 26257
+Software updates: 37213
+Internet Banking: 30678
+Instant messaging: 56748
+Videoconferencing: 39638
+Antivirus: 41078
+Search: 47482
+Streaming media: 37143
+Analytics & Telemetry: 34662
+Virtual assistant: 27240
+Notification services: 24257
