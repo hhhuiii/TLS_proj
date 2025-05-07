@@ -131,27 +131,27 @@ columns_to_keep = ['PPI', 'PPI_LEN', 'CATEGORY']  # 需要保留的列名：数�
 
 
 custom_ratios = {  # 下采样比例
-    'Videoconferencing' : 0.2,
+    'Videoconferencing' : 0,
     'Streaming media' : 0.1,
-    'Software updates' : 0.2,
-    'Social' : 0.12,
-    'Analytics & Telemetry' : 0.12,
+    'Software updates' : 0,
+    'Social' : 0,
+    'Analytics & Telemetry' : 0,
     'Other services and APIs' : 0, # 去掉此类
     'Instant messaging' : 0.6,
-    'Search' : 0.4,
+    'Search' : 0,
     'Music' : 0.24,
-    'Weather services' : 0.4,
+    'Weather services' : 0,
     'Advertising' : 0.08,
-    'Information Systems' : 1,
-    'Authentication services' : 0.2,
+    'Information Systems' : 0,
+    'Authentication services' : 0,
     'File sharing' : 0.2,
     'Antivirus' : 0.2,
     'Mail' : 0.2,
     'Games' : 0.4,
-    'Notification services' : 0.4,
-    'Remote Desktop' : 1.0,
-    'Internet Banking' : 1.0,
-    'Virtual assistant' : 1.0,
+    'Notification services' : 0,
+    'Remote Desktop' : 0,
+    'Internet Banking' : 0,
+    'Virtual assistant' : 0,
 }  # 自定义采样比例
 
 filter_csv_columns_with_sampling(input_csv, output_csv, columns_to_keep, sampling_ratios=custom_ratios, random_seed=42)

@@ -51,11 +51,23 @@ def split_for_pretrain_and_finetune(input_csv, output_prefix, pretrain_ratio=0.8
     print(f"预训练集大小: {len(pretrain)}")
     print(f"微调集大小: {len(finetune)}")
 
-    # 微调集再划分为 train/val/test（按照6:2:2的比例）
+    # 微调集再划分为 train/val/test（按照8:1:1的比例）
     finetune_labels = [row[LABEL_FIELD] for _, row in finetune]
-    ft_train, ft_temp = train_test_split(finetune, test_size=0.4, stratify=finetune_labels, random_state=random_seed)
-    ft_temp_labels = [row[LABEL_FIELD] for _, row in ft_temp]
-    ft_val, ft_test = train_test_split(ft_temp, test_size=0.5, stratify=ft_temp_labels, random_state=random_seed)
+    ft_trainval, ft_test = train_test_split(
+        finetune, 
+        test_size=0.1, 
+        stratify=finetune_labels, 
+        random_state=random_seed
+    )
+
+    # 再从剩下的90%中拿出10%的val集
+    ft_trainval_labels = [row[LABEL_FIELD] for _, row in ft_trainval]
+    ft_train, ft_val = train_test_split(
+        ft_trainval, 
+        test_size=1/9,  # 因为剩下的是90%，所以拿出其中的1/9就是10%
+        stratify=ft_trainval_labels, 
+        random_state=random_seed
+    )
 
     fieldnames = list(pretrain[0][1].keys())
 
@@ -70,7 +82,7 @@ def split_for_pretrain_and_finetune(input_csv, output_prefix, pretrain_ratio=0.8
 
     print("数据划分完成：")
     print(f"- 预训练集: {output_prefix}_pretrain.csv")
-    print(f"- 微调训练集: {ft_output_dir}/train.csv")
+    print(f"- 微调训练集: {ft_output_dir}/train.csv")  # 8:1:1
     print(f"- 微调验证集: {ft_output_dir}/val.csv")
     print(f"- 微调测试集: {ft_output_dir}/test.csv")
 
