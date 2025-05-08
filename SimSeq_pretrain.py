@@ -7,6 +7,7 @@ import pandas as pd
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from augmentions import get_transform_group
+from datetime import datetime
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -17,31 +18,15 @@ mode = 'RTO'  # 'RTO'或'FAST'
 MAX_LEN = 30
 
 
-# SimSiam投影头/预测头
-class MLP(nn.Module):
-    def __init__(self, input_dim, hidden_dim=512, output_dim=128):  # 参数：输入特征维度、中间隐藏层维度、输出特征维度
-        super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),  # 第一个全连接层，将输入映射到隐藏层维度
-            nn.LayerNorm(hidden_dim),  # LSTM更常用层归一化，对每个样本的所有特征维度归一化，加快收敛，稳定训练
-            nn.ReLU(),
-            nn.Dropout(0.2),
-            nn.Linear(hidden_dim, output_dim)  # 第二个全连接层，把隐藏特征映射到输出维度
-        )
-
-    def forward(self, x):
-        return self.net(x)
-
-
 class SimSiamDataset(Dataset):
     def __init__(self, csv_file, transform_group):
         self.data = pd.read_csv(csv_file)
-        self.transform_group = transform_group
+        self.transform_group = transform_group  # 传入的增强组，增强组属于一个场景下
 
     def __len__(self):
         return len(self.data)
     
-    def pad_and_clip(self, seq):
+    def pad_and_clip(self, seq):  # 所有输入长度为30定长，长则截断，短则补0
         seq = seq[:MAX_LEN]
         return seq + [0] * (MAX_LEN - len(seq))
 
@@ -50,24 +35,25 @@ class SimSiamDataset(Dataset):
         t1, t2 = self.transform_group
         view1 = self.pad_and_clip(t1(sequence))
         view2 = self.pad_and_clip(t2(sequence))
+        # 返回序列扰动后的两个视图
         return torch.tensor(view1, dtype=torch.float).unsqueeze(-1), \
                torch.tensor(view2, dtype=torch.float).unsqueeze(-1)
 
 
-# attention池化
+# attention池化，在时间维度上给每个时刻的输出分配权重，然后加权求和得到序列的整体表示
 class AttentionPooling(nn.Module):
     def __init__(self, hidden_dim):
         super().__init__()
         self.attn = nn.Sequential(
-            nn.Linear(hidden_dim, 128),
-            nn.Tanh(),
-            nn.Linear(128, 1)
+            nn.Linear(hidden_dim, 128),  # 将每个时间步的隐状态压缩为128维
+            nn.Tanh(),  # 引入非线性，提升表达能力
+            nn.Linear(128, 1)  # 映射为一个标量打分
         )
 
-    def forward(self, x):  # x: [B, T, H]
-        attn_scores = self.attn(x)  # [B, T, 1]
-        attn_weights = torch.softmax(attn_scores, dim=1)  # [B, T, 1]
-        context = torch.sum(attn_weights * x, dim=1)  # [B, H]
+    def forward(self, x):  # 形状[B, T, H]
+        attn_scores = self.attn(x)  # 形状[B, T, 1]
+        attn_weights = torch.softmax(attn_scores, dim=1)  # 形状[B, T, 1]
+        context = torch.sum(attn_weights * x, dim=1)  # 形状[B, H]
         return context
 
 
@@ -82,6 +68,22 @@ class LSTMwithAttentionEncoder(nn.Module):
         output, _ = self.lstm(x)  # [B, T, H]
         context = self.attn_pool(output)  # [B, H]
         return context
+
+
+# 投影头，将encoder输出映射到对比空间
+class MLP(nn.Module):
+    def __init__(self, input_dim, hidden_dim=512, output_dim=128):  # 参数：输入特征维度、中间隐藏层维度、输出特征维度
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),  # 第一个全连接层，将输入映射到隐藏层维度
+            nn.LayerNorm(hidden_dim),  # LSTM更常用层归一化，对每个样本的所有特征维度归一化，加快收敛，稳定训练
+            nn.ReLU(),
+            nn.Dropout(0.2),  # 提升训练稳定性
+            nn.Linear(hidden_dim, output_dim)  # 第二个全连接层，把隐藏特征映射到输出维度
+        )
+
+    def forward(self, x):
+        return self.net(x)
 
 
 # SimCLR类似模型
@@ -132,7 +134,7 @@ def train_simclr(csv_file, transform_group, batch_size, epochs, patience):
     for epoch in range(epochs):
         model.train()
         total_loss = 0
-        for x1, x2 in tqdm(dataloader):
+        for x1, x2 in tqdm(dataloader, disable=True):
             x1, x2 = x1.to(device), x2.to(device)
             z1 = model(x1)
             z2 = model(x2)
@@ -151,8 +153,9 @@ def train_simclr(csv_file, transform_group, batch_size, epochs, patience):
         if avg_loss < best_loss - 1e-4:
             best_loss = avg_loss
             patience_counter = 0
-            torch.save(model.encoder.state_dict(), 'LSTM_with_AttentionInEncoder.pt')
-            print("Encoder saved as LSTM_with_AttentionInEncoder.pt")
+            date = datetime.today().strftime('%m-%d')
+            torch.save(model.encoder.state_dict(), f'LSTMwithAttentionEncoder{date}.pt')
+            print(f"Encoder saved as LSTMwithAttentionEncoder{date}.pt")
         else:
             patience_counter += 1
         if patience_counter >= patience:
@@ -165,7 +168,8 @@ def train_simclr(csv_file, transform_group, batch_size, epochs, patience):
     plt.title('NT-Xent Loss Curve')
     plt.legend()
     plt.grid(True)
-    plt.show()
+    plt.savefig(f"C:\\ETC_proj\\TLS_ETC\\nt_xent_loss_curve{date}.png", bbox_inches='tight')
+    plt.close()
 
 
 if __name__ == '__main__':
@@ -173,7 +177,7 @@ if __name__ == '__main__':
     CSV_FILE = 'C:\\ETC_proj\\dataset_afterDivision\\pretrain.csv'  # 预训练数据集
     Batch_size = 2048  # 批大小
     Epochs = 100  # 训练轮次，趋近0为收敛
-    Patience = 30  # 早停容忍次数
+    Patience = 10  # 早停容忍次数
     # 场景选择/获取两个视图方案选择
     Transform_group = get_transform_group(mode)
 

@@ -7,19 +7,20 @@ import pandas as pd
 import os
 from tqdm import tqdm
 import matplotlib.pyplot as plt
-import umap  # encoder效果可视化相关
 import seaborn as sns
-from sklearn.decomposition import PCA  # 特征降维工具
 from sklearn.metrics import classification_report, confusion_matrix
 from collections import defaultdict
 import random
 import numpy as np
 from SimSeq_pretrain import LSTMwithAttentionEncoder
-from sklearn.manifold import TSNE
+from visualization import visualize_features
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 NUMCLASS = 8  # 默认的分类类别数量
+OUTPUT_DIR = './finetune_output'
+if not os.path.exists(OUTPUT_DIR):
+    os.makedirs(OUTPUT_DIR)
 
 
 # 加载微调数据集
@@ -59,7 +60,7 @@ class FineTuneDataset(Dataset):
 
 # 加入自注意力机制的微调模型，将自注意力机制放入encoder中
 class FineTuneModel(nn.Module):
-    def __init__(self, pre_trained_encoder, lstm_hidden_dim=256, num_classes=NUMCLASS):
+    def __init__(self, pre_trained_encoder, lstm_hidden_dim=512, num_classes=NUMCLASS):
         super(FineTuneModel, self).__init__()
         self.encoder = pre_trained_encoder  # 使用预训练的编码器
         
@@ -119,7 +120,7 @@ def train_finetune(csv_train, csv_val, pre_trained_encoder, batch_size=64, epoch
         # 训练模式
         model.train()
         total_train_loss = 0
-        for x, y in tqdm(train_loader, desc=f"Training Epoch {epoch+1}/{epochs}"):
+        for x, y in tqdm(train_loader, desc=f"Training Epoch {epoch+1}/{epochs}", disable=True):
             x, y = x.to(device), y.to(device)
             optimizer.zero_grad()
             output = model(x)
@@ -137,7 +138,7 @@ def train_finetune(csv_train, csv_val, pre_trained_encoder, batch_size=64, epoch
         correct = 0
         total = 0
         with torch.no_grad():
-            for x, y in tqdm(val_loader, desc=f"Validation Epoch {epoch+1}/{epochs}"):
+            for x, y in tqdm(val_loader, desc=f"Validation Epoch {epoch+1}/{epochs}", disable=True):
                 x, y = x.to(device), y.to(device)
                 output = model(x)
                 loss = criterion(output, y)
@@ -164,7 +165,7 @@ def train_finetune(csv_train, csv_val, pre_trained_encoder, batch_size=64, epoch
             }, 'finetuned_model.pt')  # 保存的文件中包含了两个部分：模型的参数和标签编码器，确保加载模型后，使用相同的编码方式对标签进行解码
         else:  # 验证集没有提升
             patience_counter += 1
-        if patience_counter >= 10:
+        if patience_counter >= 3:
             print("Early stopping triggered")
             break
 
@@ -186,11 +187,14 @@ def train_finetune(csv_train, csv_val, pre_trained_encoder, batch_size=64, epoch
     plt.title('Validation Accuracy')
     plt.legend()
 
-    plt.show()
+    plot_path = os.path.join(OUTPUT_DIR, 'training_curves.png')
+    plt.tight_layout()
+    plt.savefig(plot_path)
+    plt.close()
 
 
 # 测试以及UMAP可视化过程
-def evaluate(csv_test, pre_trained_encoder, model_path='finetuned_model.pt', output_dir='./finetune_output'):
+def evaluate(csv_test, pre_trained_encoder, model_path='finetuned_model.pt', output_dir=OUTPUT_DIR):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
@@ -216,7 +220,7 @@ def evaluate(csv_test, pre_trained_encoder, model_path='finetuned_model.pt', out
     all_pred_labels = []  # 保存预测标签
 
     with torch.no_grad():
-        for x, y in tqdm(test_loader, desc="Testing"):
+        for x, y in tqdm(test_loader, desc="Testing", disable=True):
             x, y = x.to(device), y.to(device)
 
             all_raw_inputs.append(x.squeeze(-1).cpu())  # [batch_size, sequence_length]
@@ -258,64 +262,12 @@ def evaluate(csv_test, pre_trained_encoder, model_path='finetuned_model.pt', out
     plt.savefig(f"{output_dir}/confusion_matrix.png")
     plt.close()
 
-
     # 特征分布可视化
-    # 拼接所有样本
-    all_raw_inputs = torch.cat(all_raw_inputs, dim=0).numpy()  # [num_samples, seq_len]
-    all_features = torch.cat(all_features, dim=0).numpy()  # [num_samples, hidden_dim]
-    all_true_labels_np = np.array(all_true_labels)
-
-    # 每类最多保留 max_per_class 个样本用于可视化（随机选择）
-    index_by_class = defaultdict(list)
-    for idx, label in enumerate(all_true_labels_np):
-        index_by_class[label].append(idx)
-
-    selected_indices = []
-    max_per_class = 2
-    for label, indices in index_by_class.items():
-        random.shuffle(indices)
-        selected_indices.extend(indices[:max_per_class])
-
-    # 按筛选出的索引取样本
-    raw_inputs_vis = all_raw_inputs[selected_indices]
-    features_vis = all_features[selected_indices]
-    labels_vis = all_true_labels_np[selected_indices]
-
-    # 原始输入降维可视化
-    tsne_raw = TSNE(n_components=2, random_state=42, perplexity=5, n_iter=1000)
-    raw_embedding = tsne_raw.fit_transform(raw_inputs_vis)
-
-    plt.figure(figsize=(8, 6))
-    sns.scatterplot(
-        x=raw_embedding[:, 0], y=raw_embedding[:, 1],
-        hue=[label_encoder.inverse_transform([label])[0] for label in labels_vis],
-        palette='tab20', s=80, alpha=0.9
-    )
-    plt.title('UMAP of Raw Input')
-    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-    plt.tight_layout()
-    plt.savefig(f"{output_dir}/umap_raw_input_sampled.png")
-    plt.close()
-
-    # 编码器输出降维可视化
-    tsne_feat = TSNE(n_components=2, random_state=42, perplexity=5, n_iter=1000)
-    feature_embedding = tsne_feat.fit_transform(features_vis)
-
-    plt.figure(figsize=(8, 6))
-    sns.scatterplot(
-        x=feature_embedding[:, 0], y=feature_embedding[:, 1],
-        hue=[label_encoder.inverse_transform([label])[0] for label in labels_vis],
-        palette='tab20', s=80, alpha=0.9
-    )
-    plt.title('UMAP of Encoded Features')
-    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-    plt.tight_layout()
-    plt.savefig(f"{output_dir}/umap_encoded_features_sampled.png")
-    plt.close()
+    visualize_features(all_raw_inputs, all_features, all_true_labels, label_encoder, output_dir)
 
 
 if __name__ == '__main__':
-    encoder_path = 'C:\\ETC_proj\\TLS_ETC\\lstm_with_attention_encoder.pt'
+    encoder_path = 'C:\\ETC_proj\\TLS_ETC\\LSTMwithAttentionEncoder05-07.pt'  # 模型名称后需要添加对应的时间戳
     
     # 用于加载编码器
     encoder = LSTMwithAttentionEncoder()
@@ -329,7 +281,7 @@ if __name__ == '__main__':
         csv_val = "C:\\ETC_proj\\dataset_afterDivision\\_finetune_split\\val.csv",
         pre_trained_encoder = encoder,  # 加载预训练阶段保存的encoder
         batch_size = 64,
-        epochs = 20,  # 配合早停机制
+        epochs = 100,  # 配合早停机制，容忍度为3次
         learning_rate = 0.0001  # Adam优化器会根据每个参数的历史梯度调整学习率
     )
 
