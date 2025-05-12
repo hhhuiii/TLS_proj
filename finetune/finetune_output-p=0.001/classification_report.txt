@@ -1,0 +1,14 @@
+                   precision    recall  f1-score   support
+
+      Advertising       0.80      0.67      0.73      1671
+        Antivirus       0.89      0.89      0.89      2019
+     File sharing       0.82      0.79      0.81      2486
+            Games       0.81      0.77      0.79      1204
+Instant messaging       0.90      0.92      0.91      2804
+             Mail       0.84      0.84      0.84      1769
+            Music       0.85      0.91      0.88      2110
+  Streaming media       0.70      0.80      0.75      1838
+
+         accuracy                           0.83     15901
+        macro avg       0.83      0.82      0.82     15901
+     weighted avg       0.83      0.83      0.83     15901

@@ -1,13 +1,14 @@
 import random
 
-# 丢包率
-P = 0.2
+# 丢包率 四种设置0.001（作为理想网络对照），0.01（FAST），0.02（FAST），0.05（RTO），0.1（RTO）
+rate = 5  # 扰动效果放大倍率
+P = 0.02 * rate  # 前两种设置对应场景mode：FAST，后两种设置对应场景mode：RTO
 # RTO参数设置
 L_MIN = 2  # 最小连续丢包数量
 L_MAX = 5  # 最大连续丢包数量
 
 
-# 场景 1：网络状况较拥塞
+# 场景 1：网络状况较拥塞：RTO
 
 # 扰动算法 1：基于 RTO 的子序列重复
 def rto_rep(packet_seq, p, lmin, lmax):
@@ -55,7 +56,7 @@ def rto_shift(packet_seq, p, lmin, lmax):
     return res
 
 
-# 场景 2：网络状况不那么拥塞
+# 场景 2：网络状况不那么拥塞：FAST
 
 # 扰动算法 3：基于 Fast Retransmit 的子序列重复
 def fast_retransmit_rep(packet_seq, p):
